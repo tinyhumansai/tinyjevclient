@@ -2,7 +2,11 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use std::{collections::BTreeMap, sync::Arc, time::Duration};
+use std::{
+    collections::BTreeMap,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 
 use serde_json::json;
 use tokio::{
@@ -141,7 +145,8 @@ async fn authentication_is_terminal() {
         .evaluate(&request())
         .await
         .unwrap_err();
-    assert!(matches!(error, Error::Authentication));
+    assert!(matches!(error.error, Error::Authentication));
+    assert_eq!(error.attempts, 1);
     assert_eq!(requests.lock().await.len(), 1);
 }
 
@@ -153,7 +158,7 @@ async fn malformed_success_body_is_a_decode_failure() {
         .evaluate(&request())
         .await
         .unwrap_err();
-    assert!(matches!(error, Error::Decode { .. }));
+    assert!(matches!(error.error, Error::Decode { .. }));
 }
 
 #[tokio::test]
@@ -176,6 +181,12 @@ fn rejects_invalid_configuration_before_transport() {
         Client::new(empty),
         Err(Error::InvalidConfig { .. })
     ));
+    let mut invalid_url = ClientConfig::new("key");
+    invalid_url.base_url = "not a URL".into();
+    assert!(matches!(
+        Client::new(invalid_url),
+        Err(Error::InvalidConfig { .. })
+    ));
 }
 
 #[test]
@@ -190,6 +201,21 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
         Client::new(scheme),
         Err(Error::InvalidConfig { .. })
     ));
+
+    for base_url in ["http://example.com", "http://localhost:8080"] {
+        let mut cleartext = ClientConfig::new("key");
+        cleartext.base_url = base_url.into();
+        assert!(matches!(
+            Client::new(cleartext),
+            Err(Error::InvalidConfig { .. })
+        ));
+    }
+    let mut secure = ClientConfig::new("key");
+    secure.base_url = "https://example.com".into();
+    assert!(Client::new(secure).is_ok());
+    let mut ipv6_loopback = ClientConfig::new("key");
+    ipv6_loopback.base_url = "http://[::1]:8080".into();
+    assert!(Client::new(ipv6_loopback).is_ok());
 
     let mut timeout = ClientConfig::new("key");
     timeout.timeout = Duration::ZERO;
@@ -236,6 +262,10 @@ fn status_classification_covers_terminal_and_retryable_classes() {
         }
     ));
     assert!(matches!(
+        classify_status(StatusCode::REQUEST_TIMEOUT, None),
+        Failure::Retryable { .. }
+    ));
+    assert!(matches!(
         classify_status(StatusCode::from_u16(529).unwrap(), None),
         Failure::Retryable {
             error: Error::Overloaded,
@@ -250,6 +280,14 @@ fn status_classification_covers_terminal_and_retryable_classes() {
         parse_retry_after(Some(&reqwest::header::HeaderValue::from_static("date"))),
         None
     );
+    let now = SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000);
+    let future = now + Duration::from_secs(30);
+    let date = httpdate::fmt_http_date(future);
+    let header = reqwest::header::HeaderValue::from_str(&date).unwrap();
+    assert_eq!(
+        parse_retry_after_at(Some(&header), now),
+        Some(Duration::from_secs(30))
+    );
 }
 
 #[tokio::test]
@@ -261,7 +299,9 @@ async fn timeout_is_retryable_but_respects_the_attempt_bound() {
         .evaluate(&request())
         .await
         .unwrap_err();
-    assert!(matches!(error, Error::Timeout));
+    assert!(matches!(error.error, Error::Timeout));
+    assert_eq!(error.attempts, 1);
+    assert!(error.latency >= Duration::from_millis(5));
 }
 
 #[tokio::test]
@@ -272,5 +312,41 @@ async fn exhausted_rate_limit_returns_the_classified_error() {
         .evaluate(&request())
         .await
         .unwrap_err();
-    assert!(matches!(error, Error::RateLimited));
+    assert!(matches!(error.error, Error::RateLimited));
+    assert_eq!(error.attempts, 1);
+}
+
+#[tokio::test]
+async fn local_validation_and_response_validation_report_failure_metadata() {
+    let client = Client::new(config("http://127.0.0.1:1".into())).unwrap();
+    let invalid = EvaluationRequest::jev("state", BTreeMap::new());
+    let failure = client.evaluate(&invalid).await.unwrap_err();
+    assert!(matches!(failure.error, Error::InvalidRequest { .. }));
+    assert_eq!(failure.attempts, 0);
+
+    let body = json!({
+        "model": "jev-latest",
+        "answers": {},
+        "usage": {"input_tokens": 1, "output_tokens": 1}
+    })
+    .to_string();
+    let (base_url, _) = server(vec![response(200, &body, "")]).await;
+    let failure = Client::new(config(base_url))
+        .unwrap()
+        .evaluate(&request())
+        .await
+        .unwrap_err();
+    assert!(matches!(failure.error, Error::InvalidResponse { .. }));
+    assert_eq!(failure.attempts, 1);
+}
+
+#[tokio::test]
+async fn connection_failure_is_classified_as_transport() {
+    let failure = Client::new(config("http://127.0.0.1:1".into()))
+        .unwrap()
+        .evaluate(&request())
+        .await
+        .unwrap_err();
+    assert!(matches!(failure.error, Error::Transport { .. }));
+    assert_eq!(failure.attempts, 1);
 }

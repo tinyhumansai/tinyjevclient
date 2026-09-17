@@ -2,7 +2,7 @@
 
 use std::{fmt, time::Duration};
 
-use crate::EvaluationResponse;
+use crate::{Error, EvaluationResponse};
 
 /// Async `TypeSafe` System One client.
 #[derive(Clone)]
@@ -109,6 +109,19 @@ pub struct EvaluationResult {
     /// Provider request id, when returned as a header.
     pub request_id: Option<String>,
     /// HTTP attempts including the successful or terminal attempt.
+    pub attempts: u32,
+    /// End-to-end elapsed time including retry delays.
+    pub latency: Duration,
+}
+
+/// A failed evaluation with the attempts and elapsed time it spent.
+#[derive(Debug, thiserror::Error)]
+#[error("{error}")]
+pub struct EvaluationFailure {
+    /// Classified terminal failure.
+    #[source]
+    pub error: Error,
+    /// HTTP attempts made before failure; zero for local request validation.
     pub attempts: u32,
     /// End-to-end elapsed time including retry delays.
     pub latency: Duration,

@@ -12,7 +12,7 @@
 //! use serde_json::json;
 //! use tinyjevclient::{Choice, Client, EvaluationRequest, Question};
 //!
-//! # async fn example() -> tinyjevclient::Result<()> {
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let criteria = BTreeMap::from([
 //!     ("billing".to_owned(), Some(json!("payments and refunds"))),
 //!     ("technical".to_owned(), Some(json!("bugs and outages"))),
@@ -41,7 +41,7 @@ mod error;
 mod request;
 mod response;
 
-pub use client::{Client, ClientConfig, EvaluationResult, RetryPolicy};
+pub use client::{Client, ClientConfig, EvaluationFailure, EvaluationResult, RetryPolicy};
 pub use error::{Error, Result};
 pub use request::{Choice, EvaluationRequest, Noul, NoulCriteria, Question, Score};
 pub use response::{Answer, ChoiceAnswer, EvaluationResponse, NoulAnswer, ScoreAnswer, Usage};

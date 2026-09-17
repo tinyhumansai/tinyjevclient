@@ -17,7 +17,9 @@ own data.
 
 Authentication and request errors are terminal. Transport failures, timeouts,
 rate limits, overload, and server errors use a bounded caller-visible retry
-policy. No retry is unbounded, and the result reports every attempt.
+policy. No retry is unbounded, and success or failure reports every attempt and
+the full elapsed time. HTTP is allowed only for literal loopback addresses;
+every remote endpoint requires HTTPS.
 
 Credentials never appear in `Debug`, error messages, or retained response
 bodies. Application state and provider bodies are not logged by the crate.

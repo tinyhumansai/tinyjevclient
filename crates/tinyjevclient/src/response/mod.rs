@@ -73,7 +73,12 @@ fn validate_pair(question: &Question, answer: &Answer) -> Result<()> {
                 .collect();
             let actual: BTreeSet<String> = answer.probabilities.keys().cloned().collect();
             let legend: BTreeSet<String> = answer.legend.keys().cloned().collect();
-            if actual != expected || legend != expected {
+            let legend_matches = question
+                .criteria
+                .iter()
+                .enumerate()
+                .all(|(index, criterion)| answer.legend.get(&index.to_string()) == Some(criterion));
+            if actual != expected || legend != expected || !legend_matches {
                 return Err(Error::invalid_response(
                     "score levels must exactly match request criteria",
                 ));

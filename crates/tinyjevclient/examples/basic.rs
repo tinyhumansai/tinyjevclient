@@ -6,7 +6,7 @@ use serde_json::json;
 use tinyjevclient::{Choice, Client, EvaluationRequest, Question};
 
 #[tokio::main]
-async fn main() -> tinyjevclient::Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let request = EvaluationRequest::jev(
         json!({"ticket": "I was charged twice. Please fix this."}),
         BTreeMap::from([(

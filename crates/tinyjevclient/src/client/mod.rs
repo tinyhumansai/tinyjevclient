@@ -5,7 +5,7 @@ mod test;
 
 mod types;
 
-pub use types::{Client, ClientConfig, EvaluationResult, RetryPolicy};
+pub use types::{Client, ClientConfig, EvaluationFailure, EvaluationResult, RetryPolicy};
 
 use std::time::{Duration, Instant};
 
@@ -52,15 +52,28 @@ impl Client {
     /// Returns request validation, transport, HTTP, decoding, or response
     /// contract errors. Only transient transport failures, rate limits, and
     /// overload responses are retried.
-    pub async fn evaluate(&self, request: &EvaluationRequest) -> Result<EvaluationResult> {
-        request.validate()?;
+    pub async fn evaluate(
+        &self,
+        request: &EvaluationRequest,
+    ) -> std::result::Result<EvaluationResult, EvaluationFailure> {
         let started = Instant::now();
+        request.validate().map_err(|error| EvaluationFailure {
+            error,
+            attempts: 0,
+            latency: started.elapsed(),
+        })?;
         let mut attempts = 0_u32;
         loop {
             attempts = attempts.saturating_add(1);
             match self.send_once(request).await {
                 Ok((response, request_id)) => {
-                    response.validate_for(request)?;
+                    response
+                        .validate_for(request)
+                        .map_err(|error| EvaluationFailure {
+                            error,
+                            attempts,
+                            latency: started.elapsed(),
+                        })?;
                     return Ok(EvaluationResult {
                         response,
                         request_id,
@@ -68,10 +81,20 @@ impl Client {
                         latency: started.elapsed(),
                     });
                 }
-                Err(Failure::Terminal(error)) => return Err(error),
+                Err(Failure::Terminal(error)) => {
+                    return Err(EvaluationFailure {
+                        error,
+                        attempts,
+                        latency: started.elapsed(),
+                    });
+                }
                 Err(Failure::Retryable { error, retry_after }) => {
                     if attempts > self.config.retry.max_retries {
-                        return Err(error);
+                        return Err(EvaluationFailure {
+                            error,
+                            attempts,
+                            latency: started.elapsed(),
+                        });
                     }
                     let delay = retry_after.unwrap_or_else(|| self.config.retry.delay(attempts));
                     tokio::time::sleep(delay.min(self.config.retry.max_backoff)).await;
@@ -129,6 +152,20 @@ impl ClientConfig {
                 reason: "base URL must use HTTP or HTTPS".to_owned(),
             });
         }
+        if url.scheme() == "http"
+            && !url
+                .host_str()
+                .and_then(|host| {
+                    host.trim_matches(['[', ']'])
+                        .parse::<std::net::IpAddr>()
+                        .ok()
+                })
+                .is_some_and(|address| address.is_loopback())
+        {
+            return Err(Error::InvalidConfig {
+                reason: "HTTP base URLs must use a literal loopback address".to_owned(),
+            });
+        }
         if self.timeout.is_zero() {
             return Err(Error::InvalidConfig {
                 reason: "timeout must be greater than zero".to_owned(),
@@ -173,7 +210,7 @@ fn classify_status(status: StatusCode, retry_after: Option<Duration>) -> Failure
         StatusCode::UNPROCESSABLE_ENTITY | StatusCode::BAD_REQUEST => {
             Failure::Terminal(Error::Unprocessable)
         }
-        StatusCode::TOO_MANY_REQUESTS => Failure::Retryable {
+        StatusCode::REQUEST_TIMEOUT | StatusCode::TOO_MANY_REQUESTS => Failure::Retryable {
             error: Error::RateLimited,
             retry_after,
         },
@@ -194,6 +231,19 @@ fn classify_status(status: StatusCode, retry_after: Option<Duration>) -> Failure
 }
 
 fn parse_retry_after(value: Option<&reqwest::header::HeaderValue>) -> Option<Duration> {
-    let seconds = value?.to_str().ok()?.parse::<u64>().ok()?;
-    Some(Duration::from_secs(seconds))
+    parse_retry_after_at(value, std::time::SystemTime::now())
+}
+
+fn parse_retry_after_at(
+    value: Option<&reqwest::header::HeaderValue>,
+    now: std::time::SystemTime,
+) -> Option<Duration> {
+    let value = value?.to_str().ok()?;
+    if let Ok(seconds) = value.parse::<u64>() {
+        return Some(Duration::from_secs(seconds));
+    }
+    httpdate::parse_http_date(value)
+        .ok()?
+        .duration_since(now)
+        .ok()
 }

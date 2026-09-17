@@ -115,5 +115,10 @@ fn validate_instructions(value: &serde_json::Value) -> Result<()> {
 }
 
 fn is_empty_text(value: &serde_json::Value) -> bool {
-    matches!(value, serde_json::Value::String(text) if text.trim().is_empty())
+    match value {
+        serde_json::Value::String(text) => text.trim().is_empty(),
+        serde_json::Value::Array(values) => values.is_empty(),
+        serde_json::Value::Object(values) => values.is_empty(),
+        _ => false,
+    }
 }

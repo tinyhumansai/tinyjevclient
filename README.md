@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 use serde_json::json;
 use tinyjevclient::{Choice, Client, EvaluationRequest, Question};
 
-# async fn run() -> tinyjevclient::Result<()> {
+# async fn run() -> Result<(), Box<dyn std::error::Error>> {
 let request = EvaluationRequest::jev(
     json!({"ticket": "I was charged twice"}),
     BTreeMap::from([(
@@ -43,5 +43,9 @@ real API call:
 ```sh
 TYPESAFE_API_KEY='<key>' cargo run -p tinyjevclient --example basic
 ```
+
+Remote API roots must use HTTPS; HTTP is reserved for literal loopback IPs.
+Failed evaluations retain their classified error, attempt count, and elapsed
+time so reliability measurements do not lose unsuccessful work.
 
 The repository is GPL-3.0-only and is consumed by pinned git revision.

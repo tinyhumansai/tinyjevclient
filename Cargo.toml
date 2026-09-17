@@ -27,6 +27,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # The client uses a rustls-backed HTTP transport and no platform TLS library.
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# Parses the HTTP-date form of Retry-After without accepting locale-dependent dates.
+httpdate = "1"
 # Bounded retry delays are asynchronous and inherit the caller's Tokio runtime.
 tokio = { version = "1", features = ["time"] }
 

@@ -1,5 +1,7 @@
 # Implement the System One client
 
+Linked specification: [`../specs/system-one-client.md`](../specs/system-one-client.md).
+
 1. Replace the TinyBus template with one ordinary Rust library crate.
 2. Define and pin Choice, Score, Noul, request, answer, usage, and response wires.
 3. Validate requests and request-relative response invariants.

@@ -142,6 +142,20 @@ fn rejects_blank_model_ids_instructions_and_criteria() {
     );
     assert!(blank_choice.validate().is_err());
 
+    for instructions in [json!({}), json!([])] {
+        let empty_structured = EvaluationRequest::jev(
+            "state",
+            BTreeMap::from([(
+                "choice".into(),
+                Question::Choice(Choice {
+                    instructions,
+                    criteria: BTreeMap::from([("a".into(), None), ("b".into(), None)]),
+                }),
+            )]),
+        );
+        assert!(empty_structured.validate().is_err());
+    }
+
     let empty_option = EvaluationRequest::jev(
         "state",
         BTreeMap::from([(

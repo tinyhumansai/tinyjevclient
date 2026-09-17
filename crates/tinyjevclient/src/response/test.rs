@@ -175,4 +175,12 @@ fn rejects_nonfinite_score_and_mismatched_legend() {
     };
     score.legend.remove("1");
     assert!(legend.validate_for(&request()).is_err());
+
+    let mut reversed = response();
+    let Answer::Score(score) = reversed.answers.get_mut("quality").unwrap() else {
+        panic!("fixture answer should be a score")
+    };
+    score.legend.insert("0".into(), json!("high"));
+    score.legend.insert("1".into(), json!("low"));
+    assert!(reversed.validate_for(&request()).is_err());
 }
