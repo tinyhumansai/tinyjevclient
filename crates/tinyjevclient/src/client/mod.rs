@@ -14,6 +14,7 @@ use reqwest::{StatusCode, header::RETRY_AFTER};
 use crate::{Error, EvaluationRequest, EvaluationResponse, Result};
 
 const SYSTEM_ONE_PATH: &str = "v1/systemone";
+const MAX_RETRIES: u32 = 100;
 
 impl Client {
     /// Construct a client from an explicit configuration.
@@ -174,6 +175,11 @@ impl ClientConfig {
         if self.retry.initial_backoff.is_zero() || self.retry.max_backoff.is_zero() {
             return Err(Error::InvalidConfig {
                 reason: "retry backoffs must be greater than zero".to_owned(),
+            });
+        }
+        if self.retry.max_retries > MAX_RETRIES {
+            return Err(Error::InvalidConfig {
+                reason: format!("max retries must not exceed {MAX_RETRIES}"),
             });
         }
         Ok(())

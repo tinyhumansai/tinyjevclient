@@ -230,6 +230,12 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
         Client::new(retry),
         Err(Error::InvalidConfig { .. })
     ));
+    let mut unbounded = ClientConfig::new("key");
+    unbounded.retry.max_retries = u32::MAX;
+    assert!(matches!(
+        Client::new(unbounded),
+        Err(Error::InvalidConfig { .. })
+    ));
 }
 
 #[test]
