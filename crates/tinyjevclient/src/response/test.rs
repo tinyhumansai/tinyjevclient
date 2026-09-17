@@ -65,6 +65,12 @@ fn response() -> EvaluationResponse {
 #[test]
 fn validates_all_three_answer_types() {
     response().validate_for(&request()).unwrap();
+    let mut rounded = response();
+    let Answer::Score(answer) = rounded.answers.get_mut("quality").unwrap() else {
+        panic!("fixture answer should be a score")
+    };
+    answer.score = 0.81;
+    rounded.validate_for(&request()).unwrap();
 }
 
 #[test]

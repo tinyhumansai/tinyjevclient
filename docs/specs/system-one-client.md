@@ -9,7 +9,9 @@ levels, and Noul may describe its true and false criteria.
 
 The client validates request bounds before transport and validates response ids,
 answer types, probability ranges and sums, selected maxima, Score legends, and
-weighted Score values before returning. Typed output is an interface guarantee,
+weighted Score values before returning. Score consistency allows two hundredths
+for provider display rounding while probability sums retain strict tolerance.
+Typed output is an interface guarantee,
 not a truth guarantee; applications evaluate accuracy and thresholds on their
 own data.
 

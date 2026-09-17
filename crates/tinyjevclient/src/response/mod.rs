@@ -12,6 +12,7 @@ use std::collections::BTreeSet;
 use crate::{Error, EvaluationRequest, Question, Result};
 
 const PROBABILITY_TOLERANCE: f64 = 0.000_001;
+const SCORE_TOLERANCE: f64 = 0.02;
 
 impl EvaluationResponse {
     /// Check this response against the request that produced it.
@@ -91,7 +92,7 @@ fn validate_pair(question: &Question, answer: &Answer) -> Result<()> {
                 .iter()
                 .map(|(level, probability)| level.parse::<f64>().unwrap_or_default() * probability)
                 .sum();
-            if (answer.score - expected_score).abs() > PROBABILITY_TOLERANCE {
+            if (answer.score - expected_score).abs() > SCORE_TOLERANCE {
                 return Err(Error::invalid_response(
                     "score must equal the probability-weighted level",
                 ));
