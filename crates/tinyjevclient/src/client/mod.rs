@@ -51,8 +51,10 @@ impl Client {
     /// # Errors
     ///
     /// Returns request validation, transport, HTTP, decoding, or response
-    /// contract errors. Only transient transport failures, rate limits, and
-    /// overload responses are retried.
+    /// contract errors. All transport failures are retried within the explicit
+    /// attempt cap because the transport does not reliably distinguish a
+    /// transient DNS/TLS/connectivity fault from a permanent one. HTTP request
+    /// validation and authentication failures remain terminal.
     pub async fn evaluate(
         &self,
         request: &EvaluationRequest,

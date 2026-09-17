@@ -7,4 +7,7 @@ remain private and render only as `[REDACTED]`.
 
 Production endpoints require HTTPS. Plain HTTP is accepted only for literal
 loopback IP addresses used by local tests and development services. Both
-successful and failed evaluations report attempts and end-to-end latency.
+successful and failed evaluations report attempts and end-to-end latency. All
+transport failures use the same explicit bounded retry policy because the
+transport error taxonomy cannot reliably distinguish transient DNS, TLS, and
+connectivity failures from permanent ones.
