@@ -120,6 +120,10 @@ fn rejects_empty_model_extra_ids_and_nonmaximal_choice() {
     empty_model.model.clear();
     assert!(empty_model.validate_for(&request()).is_err());
 
+    let mut wrong_model = response();
+    wrong_model.model = "jev-other".into();
+    assert!(wrong_model.validate_for(&request()).is_err());
+
     let mut extra = response();
     extra
         .answers
@@ -175,6 +179,14 @@ fn rejects_nonfinite_score_and_mismatched_legend() {
     score.score = f64::INFINITY;
     assert!(nonfinite.validate_for(&request()).is_err());
 
+    let mut outside = response();
+    let Answer::Score(score) = outside.answers.get_mut("quality").unwrap() else {
+        panic!("fixture answer should be a score")
+    };
+    score.probabilities = BTreeMap::from([("0".into(), 0.98), ("1".into(), 0.02)]);
+    score.score = -0.01;
+    assert!(outside.validate_for(&request()).is_err());
+
     let mut legend = response();
     let Answer::Score(score) = legend.answers.get_mut("quality").unwrap() else {
         panic!("fixture answer should be a score")
@@ -189,4 +201,15 @@ fn rejects_nonfinite_score_and_mismatched_legend() {
     score.legend.insert("0".into(), json!("high"));
     score.legend.insert("1".into(), json!("low"));
     assert!(reversed.validate_for(&request()).is_err());
+}
+
+#[test]
+fn accepts_the_exact_score_rounding_boundary() {
+    let mut boundary = response();
+    let Answer::Score(score) = boundary.answers.get_mut("quality").unwrap() else {
+        panic!("fixture answer should be a score")
+    };
+    score.probabilities = BTreeMap::from([("0".into(), 0.97), ("1".into(), 0.03)]);
+    score.score = 0.05;
+    boundary.validate_for(&request()).unwrap();
 }

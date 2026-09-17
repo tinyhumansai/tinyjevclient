@@ -97,6 +97,13 @@ fn config(base_url: String) -> ClientConfig {
     config
 }
 
+fn unavailable_base_url() -> String {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    drop(listener);
+    format!("http://{address}")
+}
+
 #[tokio::test]
 async fn sends_the_documented_endpoint_and_bearer_header() {
     let (base_url, requests) = server(vec![response(
@@ -222,6 +229,17 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
         Client::new(userinfo),
         Err(Error::InvalidConfig { .. })
     ));
+    for base_url in [
+        "https://example.com?tenant=x",
+        "https://example.com#fragment",
+    ] {
+        let mut component = ClientConfig::new("key");
+        component.base_url = base_url.into();
+        assert!(matches!(
+            Client::new(component),
+            Err(Error::InvalidConfig { .. })
+        ));
+    }
 
     let mut timeout = ClientConfig::new("key");
     timeout.timeout = Duration::ZERO;
@@ -357,11 +375,28 @@ async fn local_validation_and_response_validation_report_failure_metadata() {
 
 #[tokio::test]
 async fn connection_failure_is_classified_as_transport() {
-    let failure = Client::new(config("http://127.0.0.1:1".into()))
+    let failure = Client::new(config(unavailable_base_url()))
         .unwrap()
         .evaluate(&request())
         .await
         .unwrap_err();
     assert!(matches!(failure.error, Error::Transport { .. }));
     assert_eq!(failure.attempts, 1);
+}
+
+#[tokio::test]
+async fn redirect_is_not_followed() {
+    let (base_url, requests) = server(vec![response(
+        307,
+        "{}",
+        "Location: http://example.com/downgrade\r\n",
+    )])
+    .await;
+    let failure = Client::new(config(base_url))
+        .unwrap()
+        .evaluate(&request())
+        .await
+        .unwrap_err();
+    assert!(matches!(failure.error, Error::HttpStatus { status: 307 }));
+    assert_eq!(requests.lock().await.len(), 1);
 }

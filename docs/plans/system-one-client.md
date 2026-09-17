@@ -2,19 +2,24 @@
 
 Linked specification: [`../specs/system-one-client.md`](../specs/system-one-client.md).
 
-1. Replace the TinyBus template with the ordinary library at
-   `crates/tinyjevclient/`; remove the obsolete module crate, contract crate,
-   submodule, packaging workflow, and release documentation.
-2. Define and pin Choice, Score, Noul, request, answer, usage, and response
-   wires under `crates/tinyjevclient/src/{request,response}/`.
-3. Validate requests and request-relative response invariants in those module
-   roots, with every case in their adjacent `test.rs` files.
-4. Implement the rustls client, secret redaction, classified failures, failure
-   measurements, HTTPS policy, and bounded retries under
-   `crates/tinyjevclient/src/{client,error}/`.
-5. Update the crate example, public API test, root documentation, CI, lockfile,
-   dependency policy, and environment example in the same change.
-6. Verify with:
+1. Replace the TinyBus template with `crates/tinyjevclient/Cargo.toml` and
+   `crates/tinyjevclient/src/lib.rs`; remove the obsolete module/contract crates,
+   submodule, packaging workflow, and release documentation. Compile the empty
+   public surface before adding behavior.
+2. Add failing wire and validation tests in
+   `src/request/test.rs` and `src/response/test.rs`; implement the payloads in
+   `src/{request,response}/types.rs` and their validators in each `mod.rs`.
+3. Add failing configuration, retry, HTTP-status, transport, redirect, secret,
+   and failure-metadata tests in `src/client/test.rs`; implement `Client`,
+   `ClientConfig`, `RetryPolicy`, `EvaluationResult`, and `EvaluationFailure` in
+   `src/client/{mod,types}.rs`. Reject retry counts above 100 and test that
+   boundary so the saturating counter cannot become unbounded.
+4. Add rendering/source tests in `src/error/test.rs`; implement every classified
+   failure in `src/error/mod.rs`. Timeouts/connect failures are retryable;
+   request/body/redirect failures are terminal; HTTP status policy is explicit.
+5. Update `examples/basic.rs`, `tests/public_api.rs`, module READMEs, root docs,
+   `.env.example`, CI, `Cargo.lock`, and `deny.toml` in the same change.
+6. Run the verification contract:
 
    ```sh
    cargo fmt --all -- --check
@@ -25,3 +30,12 @@ Linked specification: [`../specs/system-one-client.md`](../specs/system-one-clie
    .github/scripts/check-file-coverage.sh 90 coverage.json
    cargo deny check all
    ```
+
+## Completion checklist
+
+- [x] Template and TinyBus artifacts removed.
+- [x] Choice, Score, and Noul wires pinned.
+- [x] Request-relative response validation implemented.
+- [x] HTTPS, redirect, credential, retry, and failure-metadata behavior tested.
+- [x] Every production source file exceeds 90% line coverage.
+- [x] Format, clippy, build, test, rustdoc, MSRV, supply-chain, and CI checks pass.
