@@ -1,0 +1,29 @@
+[package]
+name = "tinyjevclient"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A typed Rust client for TypeSafe AI's System One API and Jev model."
+documentation = "https://docs.rs/tinyjevclient"
+readme = "../../README.md"
+keywords = ["ai", "classification", "jev", "typesafe"]
+categories = ["api-bindings", "web-programming::http-client"]
+publish = false
+
+[dependencies]
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt-multi-thread", "sync"] }
+
+[features]
+default = []
+
+[lints]
+workspace = true
