@@ -155,6 +155,11 @@ impl ClientConfig {
                 reason: "base URL must use HTTP or HTTPS".to_owned(),
             });
         }
+        if !url.username().is_empty() || url.password().is_some() {
+            return Err(Error::InvalidConfig {
+                reason: "base URL must not contain credentials".to_owned(),
+            });
+        }
         if url.scheme() == "http"
             && !url
                 .host_str()
@@ -218,7 +223,11 @@ fn classify_status(status: StatusCode, retry_after: Option<Duration>) -> Failure
         StatusCode::UNPROCESSABLE_ENTITY | StatusCode::BAD_REQUEST => {
             Failure::Terminal(Error::Unprocessable)
         }
-        StatusCode::REQUEST_TIMEOUT | StatusCode::TOO_MANY_REQUESTS => Failure::Retryable {
+        StatusCode::REQUEST_TIMEOUT => Failure::Retryable {
+            error: Error::Timeout,
+            retry_after,
+        },
+        StatusCode::TOO_MANY_REQUESTS => Failure::Retryable {
             error: Error::RateLimited,
             retry_after,
         },

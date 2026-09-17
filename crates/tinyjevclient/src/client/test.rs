@@ -216,6 +216,12 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
     let mut ipv6_loopback = ClientConfig::new("key");
     ipv6_loopback.base_url = "http://[::1]:8080".into();
     assert!(Client::new(ipv6_loopback).is_ok());
+    let mut userinfo = ClientConfig::new("key");
+    userinfo.base_url = "https://user:password@example.com".into();
+    assert!(matches!(
+        Client::new(userinfo),
+        Err(Error::InvalidConfig { .. })
+    ));
 
     let mut timeout = ClientConfig::new("key");
     timeout.timeout = Duration::ZERO;
@@ -269,7 +275,10 @@ fn status_classification_covers_terminal_and_retryable_classes() {
     ));
     assert!(matches!(
         classify_status(StatusCode::REQUEST_TIMEOUT, None),
-        Failure::Retryable { .. }
+        Failure::Retryable {
+            error: Error::Timeout,
+            ..
+        }
     ));
     assert!(matches!(
         classify_status(StatusCode::from_u16(529).unwrap(), None),
