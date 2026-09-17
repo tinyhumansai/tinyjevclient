@@ -148,7 +148,7 @@ fn rejects_blank_model_ids_instructions_and_criteria() {
             "choice".into(),
             Question::Choice(Choice {
                 instructions: json!("choose"),
-                criteria: BTreeMap::from([("".into(), None), ("b".into(), None)]),
+                criteria: BTreeMap::from([(String::new(), None), ("b".into(), None)]),
             }),
         )]),
     );
