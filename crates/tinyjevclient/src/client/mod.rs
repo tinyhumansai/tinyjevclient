@@ -27,6 +27,7 @@ impl Client {
         config.validate()?;
         let http = reqwest::Client::builder()
             .timeout(config.timeout)
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|source| Error::Transport { source })?;
         Ok(Self { config, http })
@@ -160,6 +161,11 @@ impl ClientConfig {
                 reason: "base URL must not contain credentials".to_owned(),
             });
         }
+        if url.query().is_some() || url.fragment().is_some() {
+            return Err(Error::InvalidConfig {
+                reason: "base URL must not contain a query or fragment".to_owned(),
+            });
+        }
         if url.scheme() == "http"
             && !url
                 .host_str()
@@ -207,11 +213,13 @@ fn classify_transport(source: reqwest::Error) -> Failure {
             error: Error::Timeout,
             retry_after: None,
         }
-    } else {
+    } else if source.is_connect() {
         Failure::Retryable {
             error: Error::Transport { source },
             retry_after: None,
         }
+    } else {
+        Failure::Terminal(Error::Transport { source })
     }
 }
 

@@ -25,6 +25,11 @@ impl EvaluationResponse {
         if self.model.trim().is_empty() {
             return Err(Error::invalid_response("response model must not be empty"));
         }
+        if self.model != request.model {
+            return Err(Error::invalid_response(
+                "response model must match the requested model",
+            ));
+        }
         let expected: BTreeSet<&str> = request.questions.keys().map(String::as_str).collect();
         let actual: BTreeSet<&str> = self.answers.keys().map(String::as_str).collect();
         if actual != expected {
@@ -84,15 +89,19 @@ fn validate_pair(question: &Question, answer: &Answer) -> Result<()> {
                     "score levels must exactly match request criteria",
                 ));
             }
-            if !answer.score.is_finite() {
-                return Err(Error::invalid_response("score must be finite"));
+            let maximum =
+                u32::try_from(question.criteria.len() - 1).map_or(f64::from(u32::MAX), f64::from);
+            if !answer.score.is_finite() || !(0.0..=maximum).contains(&answer.score) {
+                return Err(Error::invalid_response(
+                    "score must be finite and inside the requested scale",
+                ));
             }
             let expected_score: f64 = answer
                 .probabilities
                 .iter()
                 .map(|(level, probability)| level.parse::<f64>().unwrap_or_default() * probability)
                 .sum();
-            if (answer.score - expected_score).abs() > SCORE_TOLERANCE {
+            if (answer.score - expected_score).abs() > SCORE_TOLERANCE + f64::EPSILON {
                 return Err(Error::invalid_response(
                     "score must equal the probability-weighted level",
                 ));
