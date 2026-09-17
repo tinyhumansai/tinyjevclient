@@ -118,3 +118,69 @@ fn enforces_choice_and_score_bounds() {
     assert!(choice.validate().is_err());
     assert!(score.validate().is_err());
 }
+
+#[test]
+fn rejects_blank_model_ids_instructions_and_criteria() {
+    let mut model = EvaluationRequest::jev("state", questions());
+    model.model = " ".into();
+    assert!(model.validate().is_err());
+
+    let mut id = EvaluationRequest::jev("state", questions());
+    let question = id.questions.remove("route").unwrap();
+    id.questions.insert(" ".into(), question);
+    assert!(id.validate().is_err());
+
+    let blank_choice = EvaluationRequest::jev(
+        "state",
+        BTreeMap::from([(
+            "choice".into(),
+            Question::Choice(Choice {
+                instructions: json!(" "),
+                criteria: BTreeMap::from([("a".into(), None), ("b".into(), None)]),
+            }),
+        )]),
+    );
+    assert!(blank_choice.validate().is_err());
+
+    let empty_option = EvaluationRequest::jev(
+        "state",
+        BTreeMap::from([(
+            "choice".into(),
+            Question::Choice(Choice {
+                instructions: json!("choose"),
+                criteria: BTreeMap::from([("".into(), None), ("b".into(), None)]),
+            }),
+        )]),
+    );
+    assert!(empty_option.validate().is_err());
+}
+
+#[test]
+fn rejects_blank_score_and_noul_descriptions() {
+    let score = EvaluationRequest::jev(
+        "state",
+        BTreeMap::from([(
+            "score".into(),
+            Question::Score(Score {
+                instructions: json!("rate"),
+                criteria: vec![json!("low"), json!(" ")],
+            }),
+        )]),
+    );
+    assert!(score.validate().is_err());
+
+    let noul = EvaluationRequest::jev(
+        "state",
+        BTreeMap::from([(
+            "noul".into(),
+            Question::Noul(Noul {
+                instructions: json!("is it safe?"),
+                criteria: Some(NoulCriteria {
+                    r#true: json!(" "),
+                    r#false: json!("not safe"),
+                }),
+            }),
+        )]),
+    );
+    assert!(noul.validate().is_err());
+}

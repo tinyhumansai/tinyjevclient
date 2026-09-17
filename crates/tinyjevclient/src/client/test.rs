@@ -71,6 +71,16 @@ async fn server(responses: Vec<String>) -> (String, Arc<Mutex<Vec<String>>>) {
     (format!("http://{address}"), requests)
 }
 
+async fn slow_server() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let (_stream, _) = listener.accept().await.unwrap();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    });
+    format!("http://{address}")
+}
+
 fn config(base_url: String) -> ClientConfig {
     let mut config = ClientConfig::new("secret-test-key");
     config.base_url = base_url;
@@ -148,7 +158,12 @@ async fn malformed_success_body_is_a_decode_failure() {
 
 #[tokio::test]
 async fn debug_output_redacts_the_api_key() {
-    let rendered = format!("{:?}", config("http://127.0.0.1:1".to_owned()));
+    let config = config("http://127.0.0.1:1".to_owned());
+    let rendered = format!("{config:?}");
+    assert!(rendered.contains("[REDACTED]"));
+    assert!(!rendered.contains("secret-test-key"));
+    let client = Client::new(config).unwrap();
+    let rendered = format!("{client:?}");
     assert!(rendered.contains("[REDACTED]"));
     assert!(!rendered.contains("secret-test-key"));
 }
@@ -161,4 +176,101 @@ fn rejects_invalid_configuration_before_transport() {
         Client::new(empty),
         Err(Error::InvalidConfig { .. })
     ));
+}
+
+#[test]
+fn validates_every_configuration_bound_and_redacted_key_replacement() {
+    let replaced = ClientConfig::new("old").with_api_key("new-secret");
+    let rendered = format!("{replaced:?}");
+    assert!(!rendered.contains("new-secret"));
+
+    let mut scheme = ClientConfig::new("key");
+    scheme.base_url = "file:///tmp/socket".into();
+    assert!(matches!(
+        Client::new(scheme),
+        Err(Error::InvalidConfig { .. })
+    ));
+
+    let mut timeout = ClientConfig::new("key");
+    timeout.timeout = Duration::ZERO;
+    assert!(matches!(
+        Client::new(timeout),
+        Err(Error::InvalidConfig { .. })
+    ));
+
+    let mut retry = ClientConfig::new("key");
+    retry.retry.initial_backoff = Duration::ZERO;
+    assert!(matches!(
+        Client::new(retry),
+        Err(Error::InvalidConfig { .. })
+    ));
+}
+
+#[test]
+fn retry_delay_is_exponential_and_bounded() {
+    let policy = RetryPolicy {
+        max_retries: 5,
+        initial_backoff: Duration::from_millis(10),
+        max_backoff: Duration::from_millis(25),
+    };
+    assert_eq!(policy.delay(1), Duration::from_millis(10));
+    assert_eq!(policy.delay(2), Duration::from_millis(20));
+    assert_eq!(policy.delay(30), Duration::from_millis(25));
+}
+
+#[test]
+fn status_classification_covers_terminal_and_retryable_classes() {
+    assert!(matches!(
+        classify_status(StatusCode::BAD_REQUEST, None),
+        Failure::Terminal(Error::Unprocessable)
+    ));
+    assert!(matches!(
+        classify_status(StatusCode::NOT_FOUND, None),
+        Failure::Terminal(Error::HttpStatus { status: 404 })
+    ));
+    assert!(matches!(
+        classify_status(StatusCode::INTERNAL_SERVER_ERROR, None),
+        Failure::Retryable {
+            error: Error::HttpStatus { status: 500 },
+            ..
+        }
+    ));
+    assert!(matches!(
+        classify_status(StatusCode::from_u16(529).unwrap(), None),
+        Failure::Retryable {
+            error: Error::Overloaded,
+            ..
+        }
+    ));
+    assert_eq!(
+        parse_retry_after(Some(&reqwest::header::HeaderValue::from_static("3"))),
+        Some(Duration::from_secs(3))
+    );
+    assert_eq!(
+        parse_retry_after(Some(&reqwest::header::HeaderValue::from_static("date"))),
+        None
+    );
+}
+
+#[tokio::test]
+async fn timeout_is_retryable_but_respects_the_attempt_bound() {
+    let mut config = config(slow_server().await);
+    config.timeout = Duration::from_millis(5);
+    let error = Client::new(config)
+        .unwrap()
+        .evaluate(&request())
+        .await
+        .unwrap_err();
+    assert!(matches!(error, Error::Timeout));
+}
+
+#[tokio::test]
+async fn exhausted_rate_limit_returns_the_classified_error() {
+    let (base_url, _) = server(vec![response(429, "{}", "")]).await;
+    let error = Client::new(config(base_url))
+        .unwrap()
+        .evaluate(&request())
+        .await
+        .unwrap_err();
+    assert!(matches!(error, Error::RateLimited));
 }

@@ -107,3 +107,72 @@ fn rejects_invalid_distributions_and_inconsistent_scores() {
     answer.score = 0.1;
     assert!(score.validate_for(&request()).is_err());
 }
+
+#[test]
+fn rejects_empty_model_extra_ids_and_nonmaximal_choice() {
+    let mut empty_model = response();
+    empty_model.model.clear();
+    assert!(empty_model.validate_for(&request()).is_err());
+
+    let mut extra = response();
+    extra
+        .answers
+        .insert("extra".into(), Answer::Noul(NoulAnswer { noul: 0.5 }));
+    assert!(extra.validate_for(&request()).is_err());
+
+    let mut nonmaximal = response();
+    let Answer::Choice(choice) = nonmaximal.answers.get_mut("route").unwrap() else {
+        panic!("fixture answer should be a choice")
+    };
+    choice.choice = "a".into();
+    assert!(nonmaximal.validate_for(&request()).is_err());
+}
+
+#[test]
+fn rejects_out_of_range_empty_and_mismatched_probability_payloads() {
+    let mut confidence = response();
+    let Answer::Choice(choice) = confidence.answers.get_mut("route").unwrap() else {
+        panic!("fixture answer should be a choice")
+    };
+    choice.confidence = 1.1;
+    assert!(confidence.validate_for(&request()).is_err());
+
+    let mut empty = response();
+    let Answer::Choice(choice) = empty.answers.get_mut("route").unwrap() else {
+        panic!("fixture answer should be a choice")
+    };
+    choice.probabilities.clear();
+    assert!(empty.validate_for(&request()).is_err());
+
+    let mut labels = response();
+    let Answer::Choice(choice) = labels.answers.get_mut("route").unwrap() else {
+        panic!("fixture answer should be a choice")
+    };
+    choice.probabilities.remove("a");
+    choice.probabilities.insert("c".into(), 0.25);
+    assert!(labels.validate_for(&request()).is_err());
+
+    let mut noul = response();
+    let Answer::Noul(answer) = noul.answers.get_mut("safe").unwrap() else {
+        panic!("fixture answer should be a noul")
+    };
+    answer.noul = f64::NAN;
+    assert!(noul.validate_for(&request()).is_err());
+}
+
+#[test]
+fn rejects_nonfinite_score_and_mismatched_legend() {
+    let mut nonfinite = response();
+    let Answer::Score(score) = nonfinite.answers.get_mut("quality").unwrap() else {
+        panic!("fixture answer should be a score")
+    };
+    score.score = f64::INFINITY;
+    assert!(nonfinite.validate_for(&request()).is_err());
+
+    let mut legend = response();
+    let Answer::Score(score) = legend.answers.get_mut("quality").unwrap() else {
+        panic!("fixture answer should be a score")
+    };
+    score.legend.remove("1");
+    assert!(legend.validate_for(&request()).is_err());
+}
