@@ -44,6 +44,17 @@ real API call:
 TYPESAFE_API_KEY='<key>' cargo run -p tinyjevclient --example basic
 ```
 
+## OpenRouter
+
+OpenRouter supports the same System One request and response format for Jev.
+Construct the client explicitly with `ClientConfig::openrouter("<key>")`.
+OpenRouter resolves `jev-latest` to a concrete `typesafe/jev-*` model ID in its
+response.
+
+For a Tiny Humans API key, use `ClientConfig::tinyhumans_openrouter("<key>")`,
+which explicitly targets
+`https://api.tinyhumans.ai/agent-integrations/openrouter/v1/systemone`.
+
 Remote API roots must use HTTPS; HTTP is reserved for literal loopback IPs.
 Failed evaluations retain their classified error, attempt count, and elapsed
 time so reliability measurements do not lose unsuccessful work.

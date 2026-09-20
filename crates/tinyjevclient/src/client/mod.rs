@@ -5,7 +5,7 @@ mod test;
 
 mod types;
 
-pub use types::{Client, ClientConfig, EvaluationFailure, EvaluationResult, RetryPolicy};
+pub use types::{Client, ClientConfig, EvaluationFailure, EvaluationResult, Provider, RetryPolicy};
 
 use std::time::{Duration, Instant};
 
@@ -71,8 +71,7 @@ impl Client {
             attempts = attempts.saturating_add(1);
             match self.send_once(request).await {
                 Ok((response, request_id)) => {
-                    response
-                        .validate_for(request)
+                    self.validate_response(&response, request)
                         .map_err(|error| EvaluationFailure {
                             error,
                             attempts,
@@ -138,6 +137,17 @@ impl Client {
         let decoded = serde_json::from_slice(&bytes)
             .map_err(|source| Failure::Terminal(Error::Decode { source }))?;
         Ok((decoded, request_id))
+    }
+
+    fn validate_response(
+        &self,
+        response: &EvaluationResponse,
+        request: &EvaluationRequest,
+    ) -> Result<()> {
+        match self.config.provider {
+            Provider::TypeSafe => response.validate_for(request),
+            Provider::OpenRouter => response.validate_for_openrouter(request),
+        }
     }
 }
 

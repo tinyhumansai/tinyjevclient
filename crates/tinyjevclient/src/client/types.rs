@@ -4,6 +4,16 @@ use std::{fmt, time::Duration};
 
 use crate::{Error, EvaluationResponse};
 
+/// System One API provider.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum Provider {
+    /// `TypeSafe`'s first-party System One API.
+    #[default]
+    TypeSafe,
+    /// `OpenRouter`'s compatible System One API.
+    OpenRouter,
+}
+
 /// Async `TypeSafe` System One client.
 #[derive(Clone)]
 pub struct Client {
@@ -25,6 +35,8 @@ pub struct ClientConfig {
     pub(super) api_key: ApiKey,
     /// API root without the versioned endpoint path.
     pub base_url: String,
+    /// Provider-specific response validation behavior.
+    pub provider: Provider,
     /// Total timeout for one HTTP attempt.
     pub timeout: Duration,
     /// Transient failure retry policy.
@@ -38,6 +50,34 @@ impl ClientConfig {
         Self {
             api_key: ApiKey(api_key.into()),
             base_url: "https://api.typesafe.ai".to_owned(),
+            provider: Provider::TypeSafe,
+            timeout: Duration::from_secs(30),
+            retry: RetryPolicy::default(),
+        }
+    }
+
+    /// Create configuration for `OpenRouter`'s System One API.
+    #[must_use]
+    pub fn openrouter(api_key: impl Into<String>) -> Self {
+        Self {
+            api_key: ApiKey(api_key.into()),
+            base_url: "https://openrouter.ai/api".to_owned(),
+            provider: Provider::OpenRouter,
+            timeout: Duration::from_secs(30),
+            retry: RetryPolicy::default(),
+        }
+    }
+
+    /// Create configuration for the `TinyHumans` `OpenRouter` System One proxy.
+    ///
+    /// The proxy accepts a `TinyHumans` API key and forwards typed Jev requests
+    /// to `OpenRouter` while applying the caller's `TinyHumans` account limits.
+    #[must_use]
+    pub fn tinyhumans_openrouter(api_key: impl Into<String>) -> Self {
+        Self {
+            api_key: ApiKey(api_key.into()),
+            base_url: "https://api.tinyhumans.ai/agent-integrations/openrouter".to_owned(),
+            provider: Provider::OpenRouter,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
         }
@@ -56,6 +96,7 @@ impl fmt::Debug for ClientConfig {
         f.debug_struct("ClientConfig")
             .field("api_key", &"[REDACTED]")
             .field("base_url", &self.base_url)
+            .field("provider", &self.provider)
             .field("timeout", &self.timeout)
             .field("retry", &self.retry)
             .finish()

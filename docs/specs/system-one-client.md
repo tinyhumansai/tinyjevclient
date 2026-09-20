@@ -35,7 +35,8 @@ classified `Error`, attempt count, and elapsed time.
 Response validation requires:
 
 - exact question ids and primitive types;
-- the exact requested model id;
+- the exact requested model id for `TypeSafe`, or OpenRouter's resolved
+  `typesafe/` Jev release matching the requested Jev alias;
 - finite probabilities in `[0, 1]`, with each distribution sum differing from
   `1.0` by at most `0.000001`;
 - Choice labels exactly matching criteria and the chosen label tying for the
@@ -48,6 +49,14 @@ Response validation requires:
 Remote base URLs require HTTPS, contain no credentials, query, or fragment, and
 automatic redirects are disabled. Plain HTTP is accepted only for literal
 loopback IP addresses used by local test servers.
+
+`ClientConfig::openrouter` uses OpenRouter's compatible System One base URL,
+`https://openrouter.ai/api`. The first-party constructor and `Client::from_env`
+retain the `TypeSafe` endpoint and `TYPESAFE_API_KEY` behavior.
+
+`ClientConfig::tinyhumans_openrouter` uses Tiny Humans' OpenRouter proxy base
+URL, `https://api.tinyhumans.ai/agent-integrations/openrouter`, and
+accepts the key supplied explicitly to its constructor.
 
 Authentication, request validation, response decoding, and non-connect
 transport failures are terminal. Timeouts, connection-establishment failures,
@@ -85,6 +94,8 @@ println!("{:?}", result.response.answers["violation"]);
 - Mock HTTP tests cover authentication, 408/429/529/5xx classification, timeout,
   connection failure, redirects, decoding, retry exhaustion, Retry-After forms,
   secret redaction, and failure metadata.
+- OpenRouter configuration and resolved-Jev response validation have mock tests;
+  its paid live integration test is explicitly ignored by default.
 - Every production source file has at least 90% line coverage.
 - Format, clippy, build, tests, rustdoc, MSRV, cargo-deny, and coverage are green.
 
