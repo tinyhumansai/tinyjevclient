@@ -5,7 +5,7 @@ mod test;
 
 mod types;
 
-pub use types::{Client, ClientConfig, EvaluationFailure, EvaluationResult, RetryPolicy};
+pub use types::{Client, ClientConfig, EvaluationFailure, EvaluationResult, Provider, RetryPolicy};
 
 use std::time::{Duration, Instant};
 
@@ -44,6 +44,17 @@ impl Client {
         Self::new(ClientConfig::new(api_key))
     }
 
+    /// Construct an `OpenRouter` client using `OPENROUTER_API_KEY`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::MissingApiKey`] when the variable is absent, or the
+    /// same configuration errors as [`Self::new`].
+    pub fn from_openrouter_env() -> Result<Self> {
+        let api_key = std::env::var("OPENROUTER_API_KEY").map_err(|_| Error::MissingApiKey)?;
+        Self::new(ClientConfig::openrouter(api_key))
+    }
+
     /// Evaluate typed questions against shared state.
     ///
     /// The returned latency includes retry delays and all attempts. Request and
@@ -71,8 +82,7 @@ impl Client {
             attempts = attempts.saturating_add(1);
             match self.send_once(request).await {
                 Ok((response, request_id)) => {
-                    response
-                        .validate_for(request)
+                    self.validate_response(&response, request)
                         .map_err(|error| EvaluationFailure {
                             error,
                             attempts,
@@ -138,6 +148,17 @@ impl Client {
         let decoded = serde_json::from_slice(&bytes)
             .map_err(|source| Failure::Terminal(Error::Decode { source }))?;
         Ok((decoded, request_id))
+    }
+
+    fn validate_response(
+        &self,
+        response: &EvaluationResponse,
+        request: &EvaluationRequest,
+    ) -> Result<()> {
+        match self.config.provider {
+            Provider::TypeSafe => response.validate_for(request),
+            Provider::OpenRouter => response.validate_for_openrouter(request),
+        }
     }
 }
 

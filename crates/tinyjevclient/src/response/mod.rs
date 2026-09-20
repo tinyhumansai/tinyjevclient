@@ -22,10 +22,44 @@ impl EvaluationResponse {
     /// Returns [`Error::InvalidResponse`] when answer ids or primitive types do
     /// not match the request, or when a probability payload is inconsistent.
     pub fn validate_for(&self, request: &EvaluationRequest) -> Result<()> {
+        self.validate_for_model(request, |response_model| response_model == request.model)
+    }
+
+    /// Check an `OpenRouter` System One response against its request.
+    ///
+    /// `OpenRouter` resolves bare Jev model IDs into the `typesafe/` namespace,
+    /// so a response can name a concrete release when the request used an
+    /// alias such as `jev-latest`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::InvalidResponse`] when answer ids or primitive types do
+    /// not match the request, or when a probability payload is inconsistent.
+    pub fn validate_for_openrouter(&self, request: &EvaluationRequest) -> Result<()> {
+        let requested = request.model.trim_start_matches('~');
+        let expected = if requested.contains('/') {
+            requested.to_owned()
+        } else {
+            format!("typesafe/{requested}")
+        };
+        self.validate_for_model(request, |response_model| {
+            if requested == "jev-latest" {
+                response_model.starts_with("typesafe/jev-")
+            } else {
+                response_model == expected || response_model.starts_with(&format!("{expected}-"))
+            }
+        })
+    }
+
+    fn validate_for_model(
+        &self,
+        request: &EvaluationRequest,
+        model_matches: impl FnOnce(&str) -> bool,
+    ) -> Result<()> {
         if self.model.trim().is_empty() {
             return Err(Error::invalid_response("response model must not be empty"));
         }
-        if self.model != request.model {
+        if !model_matches(&self.model) {
             return Err(Error::invalid_response(
                 "response model must match the requested model",
             ));

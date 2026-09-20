@@ -139,6 +139,17 @@ fn rejects_empty_model_extra_ids_and_nonmaximal_choice() {
 }
 
 #[test]
+fn openrouter_accepts_resolved_jev_models_only() {
+    let mut resolved = response();
+    resolved.model = "typesafe/jev-1.13-20260917".into();
+    resolved.validate_for_openrouter(&request()).unwrap();
+
+    let mut unrelated = resolved;
+    unrelated.model = "typesafe/other-1".into();
+    assert!(unrelated.validate_for_openrouter(&request()).is_err());
+}
+
+#[test]
 fn rejects_out_of_range_empty_and_mismatched_probability_payloads() {
     let mut confidence = response();
     let Answer::Choice(choice) = confidence.answers.get_mut("route").unwrap() else {

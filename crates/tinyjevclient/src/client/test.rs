@@ -130,6 +130,28 @@ async fn sends_the_documented_endpoint_and_bearer_header() {
 }
 
 #[tokio::test]
+async fn openrouter_uses_system_one_and_accepts_a_resolved_jev_model() {
+    let (base_url, requests) = server(vec![response(
+        200,
+        &success().replace("jev-latest", "typesafe/jev-1.13-20260917"),
+        "",
+    )])
+    .await;
+    let mut config = ClientConfig::openrouter("secret-test-key");
+    config.base_url = base_url;
+    config.timeout = Duration::from_secs(1);
+    config.retry.max_retries = 0;
+    let result = Client::new(config)
+        .unwrap()
+        .evaluate(&request())
+        .await
+        .unwrap();
+    assert_eq!(result.response.model, "typesafe/jev-1.13-20260917");
+    let sent = requests.lock().await.join("");
+    assert!(sent.starts_with("POST /v1/systemone HTTP/1.1"));
+}
+
+#[tokio::test]
 async fn retries_rate_limits_and_reports_attempts() {
     let (base_url, requests) =
         server(vec![response(429, "{}", ""), response(200, &success(), "")]).await;
@@ -220,6 +242,9 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
     let mut secure = ClientConfig::new("key");
     secure.base_url = "https://example.com".into();
     assert!(Client::new(secure).is_ok());
+    let openrouter = ClientConfig::openrouter("key");
+    assert_eq!(openrouter.base_url, "https://openrouter.ai/api");
+    assert_eq!(openrouter.provider, Provider::OpenRouter);
     let mut ipv6_loopback = ClientConfig::new("key");
     ipv6_loopback.base_url = "http://[::1]:8080".into();
     assert!(Client::new(ipv6_loopback).is_ok());

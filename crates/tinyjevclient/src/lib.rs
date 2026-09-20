@@ -41,7 +41,9 @@ mod error;
 mod request;
 mod response;
 
-pub use client::{Client, ClientConfig, EvaluationFailure, EvaluationResult, RetryPolicy};
+pub use client::{
+    Client, ClientConfig, EvaluationFailure, EvaluationResult, Provider, RetryPolicy,
+};
 pub use error::{Error, Result};
 pub use request::{Choice, EvaluationRequest, Noul, NoulCriteria, Question, Score};
 pub use response::{Answer, ChoiceAnswer, EvaluationResponse, NoulAnswer, ScoreAnswer, Usage};

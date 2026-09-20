@@ -12,3 +12,7 @@ transport failures use the same explicit bounded retry policy because the
 transport error taxonomy cannot reliably distinguish transient DNS, TLS, and
 connectivity failures from permanent ones. Other request/body/redirect errors
 are terminal, and automatic redirects are disabled.
+
+`ClientConfig::openrouter` targets OpenRouter's compatible System One API at
+`https://openrouter.ai/api/v1/systemone`; `Client::from_openrouter_env` reads
+`OPENROUTER_API_KEY` for that configuration.

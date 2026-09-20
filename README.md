@@ -44,6 +44,13 @@ real API call:
 TYPESAFE_API_KEY='<key>' cargo run -p tinyjevclient --example basic
 ```
 
+## OpenRouter
+
+OpenRouter supports the same System One request and response format for Jev.
+Use `Client::from_openrouter_env()` with `OPENROUTER_API_KEY`, or construct the
+client explicitly with `ClientConfig::openrouter("<key>")`. OpenRouter resolves
+`jev-latest` to a concrete `typesafe/jev-*` model ID in its response.
+
 Remote API roots must use HTTPS; HTTP is reserved for literal loopback IPs.
 Failed evaluations retain their classified error, attempt count, and elapsed
 time so reliability measurements do not lose unsuccessful work.
