@@ -13,7 +13,6 @@ use reqwest::{StatusCode, header::RETRY_AFTER};
 
 use crate::{Error, EvaluationRequest, EvaluationResponse, Result};
 
-const SYSTEM_ONE_PATH: &str = "v1/systemone";
 const MAX_RETRIES: u32 = 100;
 
 impl Client {
@@ -113,7 +112,7 @@ impl Client {
         let url = format!(
             "{}/{}",
             self.config.base_url.trim_end_matches('/'),
-            SYSTEM_ONE_PATH
+            self.config.system_one_path
         );
         let response = self
             .http

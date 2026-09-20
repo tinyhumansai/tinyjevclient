@@ -17,4 +17,4 @@ are terminal, and automatic redirects are disabled.
 `https://openrouter.ai/api/v1/systemone`.
 
 `ClientConfig::tinyhumans_openrouter` targets the Tiny Humans OpenRouter proxy
-at `https://api.tinyhumans.ai/agent-integrations/openrouter/v1/systemone`.
+at `https://api.tinyhumans.ai/agent-integrations/openrouter/systemone`.
