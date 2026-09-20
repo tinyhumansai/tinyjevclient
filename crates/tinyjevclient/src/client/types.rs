@@ -4,6 +4,9 @@ use std::{fmt, time::Duration};
 
 use crate::{Error, EvaluationResponse};
 
+const DEFAULT_SYSTEM_ONE_PATH: &str = "v1/systemone";
+const TINYHUMANS_SYSTEM_ONE_PATH: &str = "agent-integrations/openrouter/systemone";
+
 /// System One API provider.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Provider {
@@ -33,8 +36,10 @@ impl fmt::Debug for Client {
 #[derive(Clone)]
 pub struct ClientConfig {
     pub(super) api_key: ApiKey,
-    /// API root without the versioned endpoint path.
+    /// API origin or path prefix without the System One endpoint path.
     pub base_url: String,
+    /// Provider-specific System One endpoint path.
+    pub(super) system_one_path: &'static str,
     /// Provider-specific response validation behavior.
     pub provider: Provider,
     /// Total timeout for one HTTP attempt.
@@ -50,6 +55,7 @@ impl ClientConfig {
         Self {
             api_key: ApiKey(api_key.into()),
             base_url: "https://api.typesafe.ai".to_owned(),
+            system_one_path: DEFAULT_SYSTEM_ONE_PATH,
             provider: Provider::TypeSafe,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
@@ -62,6 +68,7 @@ impl ClientConfig {
         Self {
             api_key: ApiKey(api_key.into()),
             base_url: "https://openrouter.ai/api".to_owned(),
+            system_one_path: DEFAULT_SYSTEM_ONE_PATH,
             provider: Provider::OpenRouter,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
@@ -76,7 +83,8 @@ impl ClientConfig {
     pub fn tinyhumans_openrouter(api_key: impl Into<String>) -> Self {
         Self {
             api_key: ApiKey(api_key.into()),
-            base_url: "https://api.tinyhumans.ai/agent-integrations/openrouter".to_owned(),
+            base_url: "https://api.tinyhumans.ai".to_owned(),
+            system_one_path: TINYHUMANS_SYSTEM_ONE_PATH,
             provider: Provider::OpenRouter,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
@@ -96,6 +104,7 @@ impl fmt::Debug for ClientConfig {
         f.debug_struct("ClientConfig")
             .field("api_key", &"[REDACTED]")
             .field("base_url", &self.base_url)
+            .field("system_one_path", &self.system_one_path)
             .field("provider", &self.provider)
             .field("timeout", &self.timeout)
             .field("retry", &self.retry)

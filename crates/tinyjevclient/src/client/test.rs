@@ -152,7 +152,7 @@ async fn openrouter_uses_system_one_and_accepts_a_resolved_jev_model() {
 }
 
 #[tokio::test]
-async fn tinyhumans_proxy_uses_the_compatibility_system_one_path() {
+async fn tinyhumans_proxy_uses_the_direct_system_one_path() {
     let (base_url, requests) = server(vec![response(
         200,
         &success().replace("jev-latest", "typesafe/jev-1.13-20260917"),
@@ -173,7 +173,7 @@ async fn tinyhumans_proxy_uses_the_compatibility_system_one_path() {
             .lock()
             .await
             .join("")
-            .starts_with("POST /v1/systemone HTTP/1.1")
+            .starts_with("POST /agent-integrations/openrouter/systemone HTTP/1.1")
     );
 }
 
@@ -272,9 +272,10 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
     assert_eq!(openrouter.base_url, "https://openrouter.ai/api");
     assert_eq!(openrouter.provider, Provider::OpenRouter);
     let tinyhumans = ClientConfig::tinyhumans_openrouter("key");
+    assert_eq!(tinyhumans.base_url, "https://api.tinyhumans.ai");
     assert_eq!(
-        tinyhumans.base_url,
-        "https://api.tinyhumans.ai/agent-integrations/openrouter"
+        tinyhumans.system_one_path,
+        "agent-integrations/openrouter/systemone"
     );
     assert_eq!(tinyhumans.provider, Provider::OpenRouter);
     let mut ipv6_loopback = ClientConfig::new("key");

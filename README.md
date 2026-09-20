@@ -53,7 +53,7 @@ response.
 
 For a Tiny Humans API key, use `ClientConfig::tinyhumans_openrouter("<key>")`,
 which explicitly targets
-`https://api.tinyhumans.ai/agent-integrations/openrouter/v1/systemone`.
+`https://api.tinyhumans.ai/agent-integrations/openrouter/systemone`.
 
 Remote API roots must use HTTPS; HTTP is reserved for literal loopback IPs.
 Failed evaluations retain their classified error, attempt count, and elapsed
