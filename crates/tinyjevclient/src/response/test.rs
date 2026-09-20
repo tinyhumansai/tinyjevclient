@@ -144,6 +144,12 @@ fn openrouter_accepts_resolved_jev_models_only() {
     resolved.model = "typesafe/jev-1.13-20260917".into();
     resolved.validate_for_openrouter(&request()).unwrap();
 
+    let mut namespaced_latest = request();
+    namespaced_latest.model = "~typesafe/jev-latest".into();
+    resolved
+        .validate_for_openrouter(&namespaced_latest)
+        .unwrap();
+
     let mut unrelated = resolved;
     unrelated.model = "typesafe/other-1".into();
     assert!(unrelated.validate_for_openrouter(&request()).is_err());

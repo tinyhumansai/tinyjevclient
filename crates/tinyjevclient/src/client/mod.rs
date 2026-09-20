@@ -44,28 +44,6 @@ impl Client {
         Self::new(ClientConfig::new(api_key))
     }
 
-    /// Construct an `OpenRouter` client using `OPENROUTER_API_KEY`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::MissingApiKey`] when the variable is absent, or the
-    /// same configuration errors as [`Self::new`].
-    pub fn from_openrouter_env() -> Result<Self> {
-        let api_key = std::env::var("OPENROUTER_API_KEY").map_err(|_| Error::MissingApiKey)?;
-        Self::new(ClientConfig::openrouter(api_key))
-    }
-
-    /// Construct a `TinyHumans` `OpenRouter` proxy client using `TINYHUMANS_API_KEY`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::MissingApiKey`] when the variable is absent, or the
-    /// same configuration errors as [`Self::new`].
-    pub fn from_tinyhumans_openrouter_env() -> Result<Self> {
-        let api_key = std::env::var("TINYHUMANS_API_KEY").map_err(|_| Error::MissingApiKey)?;
-        Self::new(ClientConfig::tinyhumans_openrouter(api_key))
-    }
-
     /// Evaluate typed questions against shared state.
     ///
     /// The returned latency includes retry delays and all attempts. Request and

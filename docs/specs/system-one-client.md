@@ -51,13 +51,12 @@ automatic redirects are disabled. Plain HTTP is accepted only for literal
 loopback IP addresses used by local test servers.
 
 `ClientConfig::openrouter` uses OpenRouter's compatible System One base URL,
-`https://openrouter.ai/api`, and `Client::from_openrouter_env` reads
-`OPENROUTER_API_KEY`. The first-party constructor and `Client::from_env` retain
-the `TypeSafe` endpoint and `TYPESAFE_API_KEY` behavior.
+`https://openrouter.ai/api`. The first-party constructor and `Client::from_env`
+retain the `TypeSafe` endpoint and `TYPESAFE_API_KEY` behavior.
 
 `ClientConfig::tinyhumans_openrouter` uses Tiny Humans' OpenRouter proxy base
 URL, `https://api.tinyhumans.ai/agent-integrations/openrouter`, and
-`Client::from_tinyhumans_openrouter_env` reads `TINYHUMANS_API_KEY`.
+accepts the key supplied explicitly to its constructor.
 
 Authentication, request validation, response decoding, and non-connect
 transport failures are terminal. Timeouts, connection-establishment failures,

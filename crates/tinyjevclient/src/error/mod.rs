@@ -20,35 +20,35 @@ pub enum Error {
         reason: String,
     },
     /// Authentication was rejected.
-    #[error("TypeSafe authentication failed")]
+    #[error("provider authentication failed")]
     Authentication,
     /// The provider rejected the request shape.
-    #[error("TypeSafe rejected the request")]
+    #[error("provider rejected the request")]
     Unprocessable,
     /// The account or endpoint rate limit was reached.
-    #[error("TypeSafe rate limit exceeded")]
+    #[error("provider rate limit exceeded")]
     RateLimited,
-    /// The `TypeSafe` service reported temporary overload.
-    #[error("TypeSafe service overloaded")]
+    /// The provider reported temporary overload.
+    #[error("provider service overloaded")]
     Overloaded,
     /// The endpoint returned another unsuccessful status.
-    #[error("TypeSafe request failed with status {status}")]
+    #[error("provider request failed with status {status}")]
     HttpStatus {
         /// Returned HTTP status code.
         status: u16,
     },
     /// The request timed out.
-    #[error("TypeSafe request timed out")]
+    #[error("provider request timed out")]
     Timeout,
     /// The HTTP transport failed before a response was available.
-    #[error("TypeSafe transport failed")]
+    #[error("provider transport failed")]
     Transport {
         /// Underlying transport failure.
         #[source]
         source: reqwest::Error,
     },
     /// The response body was not valid JSON for the declared wire shape.
-    #[error("TypeSafe response could not be decoded")]
+    #[error("provider response could not be decoded")]
     Decode {
         /// Underlying JSON decoding failure.
         #[source]

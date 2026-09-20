@@ -43,7 +43,7 @@ impl EvaluationResponse {
             format!("typesafe/{requested}")
         };
         self.validate_for_model(request, |response_model| {
-            if requested == "jev-latest" {
+            if matches!(requested, "jev-latest" | "typesafe/jev-latest") {
                 response_model.starts_with("typesafe/jev-")
             } else {
                 response_model == expected || response_model.starts_with(&format!("{expected}-"))

@@ -152,6 +152,32 @@ async fn openrouter_uses_system_one_and_accepts_a_resolved_jev_model() {
 }
 
 #[tokio::test]
+async fn tinyhumans_proxy_uses_the_compatibility_system_one_path() {
+    let (base_url, requests) = server(vec![response(
+        200,
+        &success().replace("jev-latest", "typesafe/jev-1.13-20260917"),
+        "",
+    )])
+    .await;
+    let mut config = ClientConfig::tinyhumans_openrouter("secret-test-key");
+    config.base_url = base_url;
+    config.timeout = Duration::from_secs(1);
+    config.retry.max_retries = 0;
+    Client::new(config)
+        .unwrap()
+        .evaluate(&request())
+        .await
+        .unwrap();
+    assert!(
+        requests
+            .lock()
+            .await
+            .join("")
+            .starts_with("POST /v1/systemone HTTP/1.1")
+    );
+}
+
+#[tokio::test]
 async fn retries_rate_limits_and_reports_attempts() {
     let (base_url, requests) =
         server(vec![response(429, "{}", ""), response(200, &success(), "")]).await;
