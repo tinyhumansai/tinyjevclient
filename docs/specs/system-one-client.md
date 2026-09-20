@@ -55,6 +55,10 @@ loopback IP addresses used by local test servers.
 `OPENROUTER_API_KEY`. The first-party constructor and `Client::from_env` retain
 the `TypeSafe` endpoint and `TYPESAFE_API_KEY` behavior.
 
+`ClientConfig::tinyhumans_openrouter` uses Tiny Humans' OpenRouter proxy base
+URL, `https://api.tinyhumans.ai/agent-integrations/openrouter`, and
+`Client::from_tinyhumans_openrouter_env` reads `TINYHUMANS_API_KEY`.
+
 Authentication, request validation, response decoding, and non-connect
 transport failures are terminal. Timeouts, connection-establishment failures,
 408, 429, 529, and server errors use the explicit retry policy. `max_retries`

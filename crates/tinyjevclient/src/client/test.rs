@@ -245,6 +245,12 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
     let openrouter = ClientConfig::openrouter("key");
     assert_eq!(openrouter.base_url, "https://openrouter.ai/api");
     assert_eq!(openrouter.provider, Provider::OpenRouter);
+    let tinyhumans = ClientConfig::tinyhumans_openrouter("key");
+    assert_eq!(
+        tinyhumans.base_url,
+        "https://api.tinyhumans.ai/agent-integrations/openrouter"
+    );
+    assert_eq!(tinyhumans.provider, Provider::OpenRouter);
     let mut ipv6_loopback = ClientConfig::new("key");
     ipv6_loopback.base_url = "http://[::1]:8080".into();
     assert!(Client::new(ipv6_loopback).is_ok());

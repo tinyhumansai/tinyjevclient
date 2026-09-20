@@ -68,6 +68,21 @@ impl ClientConfig {
         }
     }
 
+    /// Create configuration for the `TinyHumans` `OpenRouter` System One proxy.
+    ///
+    /// The proxy accepts a `TinyHumans` API key and forwards typed Jev requests
+    /// to `OpenRouter` while applying the caller's `TinyHumans` account limits.
+    #[must_use]
+    pub fn tinyhumans_openrouter(api_key: impl Into<String>) -> Self {
+        Self {
+            api_key: ApiKey(api_key.into()),
+            base_url: "https://api.tinyhumans.ai/agent-integrations/openrouter".to_owned(),
+            provider: Provider::OpenRouter,
+            timeout: Duration::from_secs(30),
+            retry: RetryPolicy::default(),
+        }
+    }
+
     /// Replace the API key without exposing it through a public field.
     #[must_use]
     pub fn with_api_key(mut self, api_key: impl Into<String>) -> Self {

@@ -16,3 +16,7 @@ are terminal, and automatic redirects are disabled.
 `ClientConfig::openrouter` targets OpenRouter's compatible System One API at
 `https://openrouter.ai/api/v1/systemone`; `Client::from_openrouter_env` reads
 `OPENROUTER_API_KEY` for that configuration.
+
+`ClientConfig::tinyhumans_openrouter` targets the Tiny Humans OpenRouter proxy
+at `https://api.tinyhumans.ai/agent-integrations/openrouter/v1/systemone`; its
+environment constructor reads `TINYHUMANS_API_KEY`.
