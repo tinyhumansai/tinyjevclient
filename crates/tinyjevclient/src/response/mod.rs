@@ -166,12 +166,29 @@ fn validate_distribution(
         validate_probability(*probability, name)?;
     }
     let sum: f64 = probabilities.values().sum();
-    if (sum - 1.0).abs() > PROBABILITY_TOLERANCE {
+    if (sum - 1.0).abs() > distribution_tolerance(probabilities.len()) {
         return Err(Error::invalid_response(format!(
-            "{name} probabilities must sum to one"
+            "{name} probabilities must sum to one (sum {sum:.6} over {} options)",
+            probabilities.len()
         )));
     }
     Ok(())
+}
+
+/// How far a distribution's sum may stray from one.
+///
+/// Providers serialise each probability with a fixed number of decimals, so
+/// the rounding error grows with the number of options. Measured on the
+/// `OpenRouter` System One endpoint (2026-09): two decimals per option, and a
+/// 21-option Choice answered with probabilities summing to 0.99. The
+/// tolerance is therefore half a unit in the second decimal per option,
+/// floored at `PROBABILITY_TOLERANCE` so a two-option answer is held as
+/// tightly as before. It is a bound on rounding, not on the model: a
+/// distribution that is off by more than that is still rejected.
+fn distribution_tolerance(options: usize) -> f64 {
+    // A Choice holds at most 255 options, so the cast is exact.
+    let options = f64::from(u32::try_from(options).unwrap_or(u32::MAX));
+    PROBABILITY_TOLERANCE.max(options * 0.005)
 }
 
 fn validate_probability(value: f64, name: &str) -> Result<()> {
