@@ -230,3 +230,20 @@ fn accepts_the_exact_score_rounding_boundary() {
     score.score = 0.05;
     boundary.validate_for(&request()).unwrap();
 }
+
+#[test]
+fn many_option_distributions_tolerate_per_option_rounding() {
+    // 21 options rounded to two decimals summing to 0.99: what the OpenRouter
+    // endpoint answers. Rejected before the size-aware tolerance.
+    let mut probabilities = std::collections::BTreeMap::new();
+    for i in 0..20 {
+        probabilities.insert(format!("o{i}"), 0.04);
+    }
+    probabilities.insert("o20".to_owned(), 0.19);
+    assert!((probabilities.values().sum::<f64>() - 0.99).abs() < 1e-9);
+    assert!(validate_distribution(&probabilities, "choice").is_ok());
+
+    // Two options are still held tightly.
+    let two = std::collections::BTreeMap::from([("a".to_owned(), 0.6), ("b".to_owned(), 0.39)]);
+    assert!(validate_distribution(&two, "choice").is_err());
+}
