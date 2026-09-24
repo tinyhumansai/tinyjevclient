@@ -40,6 +40,8 @@ pub struct ClientConfig {
     pub base_url: String,
     /// Provider-specific System One endpoint path.
     pub(super) system_one_path: &'static str,
+    /// Exact evaluation endpoint, when the provider is exposed elsewhere.
+    pub(super) endpoint_url: Option<String>,
     /// Provider-specific response validation behavior.
     pub provider: Provider,
     /// Total timeout for one HTTP attempt.
@@ -56,6 +58,7 @@ impl ClientConfig {
             api_key: ApiKey(api_key.into()),
             base_url: "https://api.typesafe.ai".to_owned(),
             system_one_path: DEFAULT_SYSTEM_ONE_PATH,
+            endpoint_url: None,
             provider: Provider::TypeSafe,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
@@ -69,6 +72,7 @@ impl ClientConfig {
             api_key: ApiKey(api_key.into()),
             base_url: "https://openrouter.ai/api".to_owned(),
             system_one_path: DEFAULT_SYSTEM_ONE_PATH,
+            endpoint_url: None,
             provider: Provider::OpenRouter,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
@@ -85,6 +89,7 @@ impl ClientConfig {
             api_key: ApiKey(api_key.into()),
             base_url: "https://api.tinyhumans.ai".to_owned(),
             system_one_path: TINYHUMANS_SYSTEM_ONE_PATH,
+            endpoint_url: None,
             provider: Provider::OpenRouter,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
@@ -97,6 +102,20 @@ impl ClientConfig {
         self.api_key = ApiKey(api_key.into());
         self
     }
+
+    /// Use an exact evaluation endpoint instead of the provider's conventional
+    /// System One path.
+    #[must_use]
+    pub fn with_endpoint_url(mut self, endpoint_url: impl Into<String>) -> Self {
+        self.endpoint_url = Some(endpoint_url.into());
+        self
+    }
+
+    /// Returns the exact endpoint override, when configured.
+    #[must_use]
+    pub fn endpoint_url(&self) -> Option<&str> {
+        self.endpoint_url.as_deref()
+    }
 }
 
 impl fmt::Debug for ClientConfig {
@@ -105,6 +124,7 @@ impl fmt::Debug for ClientConfig {
             .field("api_key", &"[REDACTED]")
             .field("base_url", &self.base_url)
             .field("system_one_path", &self.system_one_path)
+            .field("endpoint_url", &self.endpoint_url)
             .field("provider", &self.provider)
             .field("timeout", &self.timeout)
             .field("retry", &self.retry)

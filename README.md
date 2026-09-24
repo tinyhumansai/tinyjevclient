@@ -51,6 +51,16 @@ Construct the client explicitly with `ClientConfig::openrouter("<key>")`.
 OpenRouter resolves `jev-latest` to a concrete `typesafe/jev-*` model ID in its
 response.
 
+Compatible routers exposed at a nonstandard path can be selected without
+weakening provider-aware response validation:
+
+```rust
+let config = tinyjevclient::ClientConfig::openrouter("<key>")
+    .with_endpoint_url("https://openrouter.ai/api/alpha/decisions");
+let client = tinyjevclient::Client::new(config)?;
+# Ok::<(), tinyjevclient::Error>(())
+```
+
 For a Tiny Humans API key, use `ClientConfig::tinyhumans_openrouter("<key>")`,
 which explicitly targets
 `https://api.tinyhumans.ai/agent-integrations/openrouter/systemone`.

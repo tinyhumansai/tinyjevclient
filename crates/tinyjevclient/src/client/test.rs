@@ -130,6 +130,34 @@ async fn sends_the_documented_endpoint_and_bearer_header() {
 }
 
 #[tokio::test]
+async fn an_exact_endpoint_override_is_not_extended_with_a_provider_path() {
+    let (base_url, requests) = server(vec![response(
+        200,
+        &success().replace("jev-latest", "typesafe/jev-1.13-20260917"),
+        "",
+    )])
+    .await;
+    let endpoint = format!("{base_url}/api/alpha/decisions");
+    let mut config = ClientConfig::openrouter("secret-test-key").with_endpoint_url(endpoint);
+    config.timeout = Duration::from_secs(1);
+    config.retry.max_retries = 0;
+
+    Client::new(config)
+        .unwrap()
+        .evaluate(&request())
+        .await
+        .unwrap();
+
+    assert!(
+        requests
+            .lock()
+            .await
+            .join("")
+            .starts_with("POST /api/alpha/decisions HTTP/1.1")
+    );
+}
+
+#[tokio::test]
 async fn openrouter_uses_system_one_and_accepts_a_resolved_jev_model() {
     let (base_url, requests) = server(vec![response(
         200,
@@ -249,6 +277,12 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
     let replaced = ClientConfig::new("old").with_api_key("new-secret");
     let rendered = format!("{replaced:?}");
     assert!(!rendered.contains("new-secret"));
+    let endpoint =
+        ClientConfig::new("key").with_endpoint_url("https://example.com/custom/decisions");
+    assert_eq!(
+        endpoint.endpoint_url(),
+        Some("https://example.com/custom/decisions")
+    );
 
     let mut scheme = ClientConfig::new("key");
     scheme.base_url = "file:///tmp/socket".into();
