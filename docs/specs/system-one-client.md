@@ -53,6 +53,9 @@ loopback IP addresses used by local test servers.
 `ClientConfig::openrouter` uses OpenRouter's compatible System One base URL,
 `https://openrouter.ai/api`. The first-party constructor and `Client::from_env`
 retain the `TypeSafe` endpoint and `TYPESAFE_API_KEY` behavior.
+`ClientConfig::with_endpoint_url` may select an exact compatible endpoint such
+as OpenRouter's Decisions route while preserving the chosen provider's response
+validation and every URL hardening rule.
 
 `ClientConfig::tinyhumans_openrouter` uses the Tiny Humans OpenRouter System One
 endpoint, `https://api.tinyhumans.ai/agent-integrations/openrouter/systemone`,

@@ -109,11 +109,13 @@ impl Client {
         &self,
         request: &EvaluationRequest,
     ) -> std::result::Result<(EvaluationResponse, Option<String>), Failure> {
-        let url = format!(
-            "{}/{}",
-            self.config.base_url.trim_end_matches('/'),
-            self.config.system_one_path
-        );
+        let url = self.config.endpoint_url.clone().unwrap_or_else(|| {
+            format!(
+                "{}/{}",
+                self.config.base_url.trim_end_matches('/'),
+                self.config.system_one_path
+            )
+        });
         let response = self
             .http
             .post(url)
@@ -157,37 +159,9 @@ impl ClientConfig {
                 reason: "api key must not be empty".to_owned(),
             });
         }
-        let url = reqwest::Url::parse(&self.base_url).map_err(|_| Error::InvalidConfig {
-            reason: "base URL must be an absolute HTTP URL".to_owned(),
-        })?;
-        if !matches!(url.scheme(), "http" | "https") {
-            return Err(Error::InvalidConfig {
-                reason: "base URL must use HTTP or HTTPS".to_owned(),
-            });
-        }
-        if !url.username().is_empty() || url.password().is_some() {
-            return Err(Error::InvalidConfig {
-                reason: "base URL must not contain credentials".to_owned(),
-            });
-        }
-        if url.query().is_some() || url.fragment().is_some() {
-            return Err(Error::InvalidConfig {
-                reason: "base URL must not contain a query or fragment".to_owned(),
-            });
-        }
-        if url.scheme() == "http"
-            && !url
-                .host_str()
-                .and_then(|host| {
-                    host.trim_matches(['[', ']'])
-                        .parse::<std::net::IpAddr>()
-                        .ok()
-                })
-                .is_some_and(|address| address.is_loopback())
-        {
-            return Err(Error::InvalidConfig {
-                reason: "HTTP base URLs must use a literal loopback address".to_owned(),
-            });
+        validate_url(&self.base_url, "base URL")?;
+        if let Some(endpoint_url) = &self.endpoint_url {
+            validate_url(endpoint_url, "endpoint URL")?;
         }
         if self.timeout.is_zero() {
             return Err(Error::InvalidConfig {
@@ -206,6 +180,42 @@ impl ClientConfig {
         }
         Ok(())
     }
+}
+
+fn validate_url(value: &str, label: &str) -> Result<()> {
+    let url = reqwest::Url::parse(value).map_err(|_| Error::InvalidConfig {
+        reason: format!("{label} must be an absolute HTTP URL"),
+    })?;
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err(Error::InvalidConfig {
+            reason: format!("{label} must use HTTP or HTTPS"),
+        });
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(Error::InvalidConfig {
+            reason: format!("{label} must not contain credentials"),
+        });
+    }
+    if url.query().is_some() || url.fragment().is_some() {
+        return Err(Error::InvalidConfig {
+            reason: format!("{label} must not contain a query or fragment"),
+        });
+    }
+    if url.scheme() == "http"
+        && !url
+            .host_str()
+            .and_then(|host| {
+                host.trim_matches(['[', ']'])
+                    .parse::<std::net::IpAddr>()
+                    .ok()
+            })
+            .is_some_and(|address| address.is_loopback())
+    {
+        return Err(Error::InvalidConfig {
+            reason: format!("HTTP {label} must use a literal loopback address"),
+        });
+    }
+    Ok(())
 }
 
 enum Failure {
