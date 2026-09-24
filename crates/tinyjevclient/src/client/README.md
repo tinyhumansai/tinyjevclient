@@ -18,3 +18,6 @@ are terminal, and automatic redirects are disabled.
 
 `ClientConfig::tinyhumans_openrouter` targets the Tiny Humans OpenRouter proxy
 at `https://api.tinyhumans.ai/agent-integrations/openrouter/systemone`.
+`ClientConfig::with_sdk_name` sanitizes product attribution and sends
+`x-sdk-name` only to this exact HTTPS endpoint. OpenRouter, TypeSafe, and
+other endpoint overrides do not receive it.
