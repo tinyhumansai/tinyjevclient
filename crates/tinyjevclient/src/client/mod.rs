@@ -109,18 +109,8 @@ impl Client {
         &self,
         request: &EvaluationRequest,
     ) -> std::result::Result<(EvaluationResponse, Option<String>), Failure> {
-        let url = self.config.endpoint_url.clone().unwrap_or_else(|| {
-            format!(
-                "{}/{}",
-                self.config.base_url.trim_end_matches('/'),
-                self.config.system_one_path
-            )
-        });
         let response = self
-            .http
-            .post(url)
-            .bearer_auth(self.config.api_key.expose())
-            .json(request)
+            .evaluation_request(request)
             .send()
             .await
             .map_err(classify_transport)?;
@@ -140,6 +130,27 @@ impl Client {
         Ok((decoded, request_id))
     }
 
+    fn evaluation_request(&self, request: &EvaluationRequest) -> reqwest::RequestBuilder {
+        let url = self.config.endpoint_url.clone().unwrap_or_else(|| {
+            format!(
+                "{}/{}",
+                self.config.base_url.trim_end_matches('/'),
+                self.config.system_one_path
+            )
+        });
+        let mut builder = self
+            .http
+            .post(&url)
+            .bearer_auth(self.config.api_key.expose())
+            .json(request);
+        if let Some(name) = self.config.sdk_name.as_deref()
+            && is_tinyhumans_proxy_endpoint(&url)
+        {
+            builder = builder.header("x-sdk-name", name);
+        }
+        builder
+    }
+
     fn validate_response(
         &self,
         response: &EvaluationResponse,
@@ -150,6 +161,20 @@ impl Client {
             Provider::OpenRouter => response.validate_for_openrouter(request),
         }
     }
+}
+
+fn is_tinyhumans_proxy_endpoint(raw: &str) -> bool {
+    let Ok(url) = reqwest::Url::parse(raw) else {
+        return false;
+    };
+    url.scheme() == "https"
+        && url.host_str() == Some("api.tinyhumans.ai")
+        && url.port_or_known_default() == Some(443)
+        && url.username().is_empty()
+        && url.password().is_none()
+        && url.path() == "/agent-integrations/openrouter/systemone"
+        && url.query().is_none()
+        && url.fragment().is_none()
 }
 
 impl ClientConfig {

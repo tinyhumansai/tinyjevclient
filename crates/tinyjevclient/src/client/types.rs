@@ -48,6 +48,8 @@ pub struct ClientConfig {
     pub timeout: Duration,
     /// Transient failure retry policy.
     pub retry: RetryPolicy,
+    /// Sanitized product attribution for the exact `TinyHumans` proxy endpoint.
+    pub(super) sdk_name: Option<String>,
 }
 
 impl ClientConfig {
@@ -62,6 +64,7 @@ impl ClientConfig {
             provider: Provider::TypeSafe,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
+            sdk_name: None,
         }
     }
 
@@ -76,6 +79,7 @@ impl ClientConfig {
             provider: Provider::OpenRouter,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
+            sdk_name: None,
         }
     }
 
@@ -93,6 +97,7 @@ impl ClientConfig {
             provider: Provider::OpenRouter,
             timeout: Duration::from_secs(30),
             retry: RetryPolicy::default(),
+            sdk_name: None,
         }
     }
 
@@ -108,6 +113,24 @@ impl ClientConfig {
     #[must_use]
     pub fn with_endpoint_url(mut self, endpoint_url: impl Into<String>) -> Self {
         self.endpoint_url = Some(endpoint_url.into());
+        self
+    }
+
+    /// Attribute `TinyHumans` proxy requests to a product. Invalid characters
+    /// are dropped, the value is lowercased and capped at 64 ASCII bytes.
+    /// Other endpoints never receive this header.
+    #[must_use]
+    pub fn with_sdk_name(mut self, raw: &str) -> Self {
+        let name = raw
+            .trim()
+            .chars()
+            .filter(|character| {
+                character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-')
+            })
+            .take(64)
+            .map(|character| character.to_ascii_lowercase())
+            .collect::<String>();
+        self.sdk_name = (!name.is_empty()).then_some(name);
         self
     }
 
@@ -128,6 +151,7 @@ impl fmt::Debug for ClientConfig {
             .field("provider", &self.provider)
             .field("timeout", &self.timeout)
             .field("retry", &self.retry)
+            .field("sdk_name", &self.sdk_name)
             .finish()
     }
 }

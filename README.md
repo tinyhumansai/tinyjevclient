@@ -64,6 +64,9 @@ let client = tinyjevclient::Client::new(config)?;
 For a Tiny Humans API key, use `ClientConfig::tinyhumans_openrouter("<key>")`,
 which explicitly targets
 `https://api.tinyhumans.ai/agent-integrations/openrouter/systemone`.
+Hosts can call `.with_sdk_name("openhuman")` to attach sanitized `x-sdk-name`
+product attribution. The header is sent only to that exact Tiny Humans HTTPS
+endpoint, even when an endpoint override is configured.
 
 Remote API roots must use HTTPS; HTTP is reserved for literal loopback IPs.
 Failed evaluations retain their classified error, attempt count, and elapsed

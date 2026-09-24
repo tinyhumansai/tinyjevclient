@@ -205,6 +205,53 @@ async fn tinyhumans_proxy_uses_the_direct_system_one_path() {
     );
 }
 
+#[test]
+fn sdk_name_is_sanitized_and_sent_only_to_the_exact_tinyhumans_proxy() {
+    let config = ClientConfig::tinyhumans_openrouter("key")
+        .with_sdk_name(" OpenCompany\r\nInjected: yes / test ");
+    let client = Client::new(config.clone()).unwrap();
+    let outgoing = client.evaluation_request(&request()).build().unwrap();
+    assert_eq!(
+        outgoing.headers().get("x-sdk-name").unwrap(),
+        "opencompanyinjectedyestest"
+    );
+
+    let direct = Client::new(ClientConfig::openrouter("key").with_sdk_name("openhuman")).unwrap();
+    assert!(
+        direct
+            .evaluation_request(&request())
+            .build()
+            .unwrap()
+            .headers()
+            .get("x-sdk-name")
+            .is_none()
+    );
+
+    for endpoint in [
+        "https://api.tinyhumans.ai.evil.example/agent-integrations/openrouter/systemone",
+        "https://api.tinyhumans.ai:444/agent-integrations/openrouter/systemone",
+        "https://example.com/agent-integrations/openrouter/systemone",
+    ] {
+        let other = Client::new(config.clone().with_endpoint_url(endpoint)).unwrap();
+        assert!(
+            other
+                .evaluation_request(&request())
+                .build()
+                .unwrap()
+                .headers()
+                .get("x-sdk-name")
+                .is_none(),
+            "must not attribute {endpoint}"
+        );
+    }
+    assert!(
+        Client::new(config.with_endpoint_url(
+            "https://api.tinyhumans.ai/agent-integrations/openrouter/systemone?redirect=1"
+        ))
+        .is_err()
+    );
+}
+
 #[tokio::test]
 async fn retries_rate_limits_and_reports_attempts() {
     let (base_url, requests) =
