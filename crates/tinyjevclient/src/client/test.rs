@@ -283,6 +283,21 @@ fn validates_every_configuration_bound_and_redacted_key_replacement() {
         endpoint.endpoint_url(),
         Some("https://example.com/custom/decisions")
     );
+    for endpoint_url in [
+        "not a URL",
+        "file:///tmp/decisions",
+        "http://example.com/decisions",
+        "http://localhost:8080/decisions",
+        "https://user:password@example.com/decisions",
+        "https://example.com/decisions?tenant=x",
+        "https://example.com/decisions#fragment",
+    ] {
+        let config = ClientConfig::new("key").with_endpoint_url(endpoint_url);
+        assert!(matches!(
+            Client::new(config),
+            Err(Error::InvalidConfig { .. })
+        ));
+    }
 
     let mut scheme = ClientConfig::new("key");
     scheme.base_url = "file:///tmp/socket".into();
